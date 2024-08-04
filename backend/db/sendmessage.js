@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Conversation from "../models/conversationmodel.js";
 import Message from "../models/messagemodel.js";
+import { getReceiverSocketId, io } from "../socket/socket.js"; // Ensure you have the correct path to the socket file
 
 export const sendmessage = async (req, res) => {
   try {
@@ -8,29 +9,27 @@ export const sendmessage = async (req, res) => {
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
-    // Validate if senderId and receiverId are valid ObjectIds
+    console.log("Sender ID:", senderId);
+    console.log("Receiver ID:", receiverId);
+
     if (!mongoose.Types.ObjectId.isValid(senderId) || !mongoose.Types.ObjectId.isValid(receiverId)) {
       return res.status(400).json({ error: "Invalid senderId or receiverId" });
     }
 
-    // Create the message object
     const newMessage = new Message({
       senderId,
       receiverId,
       message,
     });
 
-    // Validate the message object
     const validationError = newMessage.validateSync();
     if (validationError) {
       console.error("Message validation error:", validationError.message);
       return res.status(400).json({ error: validationError.message });
     }
 
-    // Save the message to the database
     await newMessage.save();
 
-    // Find or create conversation and update messages array
     let conversation = await Conversation.findOne({
       participants: { $all: [senderId, receiverId] }
     });
@@ -45,6 +44,13 @@ export const sendmessage = async (req, res) => {
     conversation.messages.push(newMessage._id);
     await conversation.save();
 
+    // Emit the new message event to the receiver
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("newMessage", newMessage);
+      console.log("Emitted new message:", newMessage);
+    }
+
     res.status(201).json(newMessage);
   } catch (error) {
     console.error("Error in sendmessage controller:", error.message);
@@ -54,7 +60,10 @@ export const sendmessage = async (req, res) => {
 export const getmessage = async (req, res) => {
   try {
     const { id: usertochatid } = req.params;
-    const senderid = req.user._id; // Assuming user._id is correctly populated in req.user
+    const senderid = req.user._id;
+
+    console.log("Sender ID:", senderid);
+    console.log("User to Chat ID:", usertochatid);
 
     const conversation = await Conversation.findOne({
       participants: { $all: [senderid, usertochatid] }
@@ -70,4 +79,3 @@ export const getmessage = async (req, res) => {
     res.status(500).json({ error: "Error in getmessage controller" });
   }
 };
- 

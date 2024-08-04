@@ -1,28 +1,49 @@
-import express from "express";
-import authroutes from "./routes/auth.routes.js";
-import connectmongodb from "./db/connectmongodb.js";
-import messageroutes from "./routes/messageroutes.js";
-import cookieParser from "cookie-parser";
+import express from 'express';
 import dotenv from 'dotenv';
-import usersroutes from "./routes/usersroutes.js"
+import cookieParser from 'cookie-parser';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import http from 'http';
+import cors from 'cors';
 
-import jwt from "jsonwebtoken";
+import authRoutes from './routes/auth.routes.js';
+import messageRoutes from './routes/messageroutes.js';
+import userRoutes from './routes/usersroutes.js';
+import { app,server } from './socket/socket.js';
+import connectmongodb from './db/connectmongodb.js';
+
+const corsOptions = {
+  origin: 'http://localhost:3000',  // Replace with the actual origin of your frontend
+  credentials: true,  // Allow cookies and authorization headers
+};
+
+app.use(cors(corsOptions));
+
 
 dotenv.config();
-const app = express();
 
-const PORT = process.env.PORT || 5000;
+// CORS configuration to allow credentials
 
+
+
+app.use(express.json()); 
 app.use(cookieParser());
-app.use(express.json());
 
-// Example route to set a cookie for testing
+app.use('/api/auth', authRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/users', userRoutes);
 
-app.use("/api/auth", authroutes);
-app.use("/api/messages", messageroutes);
-app.use("/api/users", usersroutes);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
-app.listen(PORT, () => {
-    connectmongodb();
-    console.log(`server is listening on ${PORT}`);
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
 });
+
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+  connectmongodb();
+  console.log(`Server Running on port ${PORT}`);
+});
+ 
