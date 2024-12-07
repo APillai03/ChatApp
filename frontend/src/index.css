@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 body{
-    background: linear-gradient(rgba(0,0,0,0.2),rgba(0,0,0,0.2)),url("./assets/pexels-ekamelev-1685543.jpg");
+    background: linear-gradient(rgba(0,0,0,0.2),rgba(0,0,0,0.2)),url("./assets/bg.webp");
     background-repeat: no-repeat;
     background-size: cover;
     background-position: center;
